@@ -4,6 +4,8 @@ Panel personal de seguimiento de rutas en bicicleta. Sube tus archivos **GPX** e
 
 > 100% vanilla (HTML + CSS + JS) en el frontend y un pequeño servidor en **Python (solo librería estándar)** para el almacenamiento. Sin frameworks, sin librerías de gráficas, sin dependencias externas.
 
+<img width="1894" height="938" alt="image" src="https://github.com/user-attachments/assets/1b4f88a6-39ca-4890-ab12-2a49d4f8774f" />
+
 ## 📱 Los datos: FitoTrack
 
 Este panel nace para explotar los datos que registro con **[FitoTrack](https://f-droid.org/packages/de.tadris.fitness/)** (app de código abierto para Android, disponible en F-Droid y Google Play):
