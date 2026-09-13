@@ -31,7 +31,6 @@ Todo se procesa en tu propio equipo: **las coordenadas GPS nunca se guardan**, s
 - 📊 Gráficas dibujadas a mano sobre `<canvas>` (líneas mensuales y perfil de velocidad máxima)
 - 🗓️ Calendario con un punto por ruta, coloreado según la distancia de cada una
 - 🏆 Tarjetas de mejor mes (más km) y mes más rápido (mejor velocidad media)
-- 🎨 Diseño estilo MADRING (tipografías Barlow / Barlow Condensed, acentos en rojo)
 - ☀️/🌙 Modo claro y oscuro con memoria de preferencia
 - 📱 Interfaz responsive (móvil, tablet y escritorio)
 - 📥 Subida por arrastrar y soltar, multi-archivo, con barra de progreso
@@ -74,4 +73,8 @@ bici/
 
 ## Licencia
 
-Uso personal — haz lo que quieras con él.
+## Licencia
+
+Este proyecto está licenciado bajo la **GNU General Public License v3.0 (GPL-3.0)**.
+
+Puedes usar, modificar y distribuir este software libremente, siempre que las obras derivadas se distribuyan bajo la misma licencia y se indiquen los cambios realizados. Ver el archivo [LICENSE](LICENSE) para el texto completo.
