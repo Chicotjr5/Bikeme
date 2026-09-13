@@ -50,6 +50,8 @@ python3 server.py            # puerto 8080 por defecto
 
 Abre en el navegador: **http://localhost:8080**
 
+Accede al siguiente enlace para acceder a una versión de prueba: https://marchm.net/bikeme/
+
 > ⚠️ La app **debe** servirse con `server.py`: el guardado de datos usa una API local (`/api/data`), por lo que abrirla con `file://` o con `python3 -m http.server` no permitirá persistir rutas.
 
 Al primer uso se generan datos de ejemplo automáticamente. Sube tus GPX desde **Subir GPX** para sustituirlos por datos reales.
@@ -70,8 +72,6 @@ bici/
 - `data/rides.json` está en `.gitignore`: tus rutas nunca se suben al repositorio
 - No se almacenan coordenadas GPS ni archivos GPX: solo métricas agregadas por ruta
 - Todo funciona en local; no hay servicios externos (salvo las fuentes de Google Fonts)
-
-## Licencia
 
 ## Licencia
 
