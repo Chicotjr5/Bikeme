@@ -1,0 +1,14 @@
+# Datos personales — nunca subir
+data/
+*.gpx
+
+# Documentos de trabajo locales
+AGENTS.md
+memory.md
+gpx-comparison.md
+
+# Artefactos del sistema
+__pycache__/
+*.pyc
+session
+resume.sh
