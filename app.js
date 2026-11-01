@@ -29,8 +29,8 @@ async function loadData(){
   }catch(e){ /* server offline — start with empty data */ }
 }
 
-function persist(){
-  return fetch('/api/data', {
+async function persist(){
+  await fetch('/api/data', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({rides: rides, isFake: fakeFlag})
@@ -136,20 +136,9 @@ function setupThemeToggle(){
     localStorage.setItem('bici_theme', dark ? 'dark' : 'light');
     apply();
     if(currentPage === 'dashboard'){
-      drawRidesMonthChart();
-      drawTopSpeedChart();
+      renderCharts();
     }
   });
-}
-
-function chartTheme(){
-  var dark = document.documentElement.classList.contains('dark');
-  return {
-    dark: dark,
-    grid: dark ? 'rgba(246,244,244,0.08)' : 'rgba(40,24,21,0.08)',
-    axis: dark ? '#b39c98' : '#846762',
-    text: dark ? '#f6f4f4' : '#281815'
-  };
 }
 
 // ── Date display ─────────────────────────────────────────────────────
@@ -169,7 +158,7 @@ function setupNav(){
   });
 }
 
-window.navigateTo = function(page){
+function navigateTo(page){
   currentPage = page;
   var links = document.querySelectorAll('.nav-links li');
   links.forEach(function(li){ li.classList.toggle('active', li.dataset.page === page); });
@@ -177,7 +166,8 @@ window.navigateTo = function(page){
   document.getElementById('pageTitle').textContent = pageNames[page] || page;
   closeMobileMenu();
   renderPage(page);
-};
+}
+Object.assign(window, { navigateTo });
 
 function renderPage(page){
   document.querySelectorAll('.page').forEach(function(p){ p.style.display = 'none'; });
@@ -203,9 +193,8 @@ function renderDashboard(){
   renderRecentRides();
     setTimeout(function(){
     initRidesMonthSelector();
-    drawRidesMonthChart();
-    drawTopSpeedChart();
     initTopSpeedSelector();
+    renderCharts();
   }, 50);
 }
 
@@ -402,8 +391,6 @@ function renderRides(){
   else if(sort==='speed-desc') sorted.sort(function(a,b){return b.avgSpeed-a.avgSpeed;});
 
   list.innerHTML = sorted.map(function(r){
-    var durH = Math.floor(r.duration/60);
-    var durM = r.duration%60;
     var oSpd = r.overallAvgSpeed || r.avgSpeed;
     return '<div class="ride-card-full" data-ride-id="'+r.id+'">'+
       '<div class="ride-card-top"><div><div class="ride-card-date">'+formatDate(r.date)+'</div><div class="ride-card-day">'+getDayName(r.date)+'</div></div>'+
@@ -430,26 +417,38 @@ window.deleteRide = function(id){
   renderRecentRides();
   setTimeout(function(){
     initRidesMonthSelector();
-    drawRidesMonthChart();
-    drawTopSpeedChart();
+    renderCharts();
   }, 50);
 };
 
-// ── Charts (Canvas) ─────────────────────────────────────────────────
-var chartTooltipEl = null;
-function getTooltip(){ if(!chartTooltipEl) chartTooltipEl = document.getElementById('chartTooltip'); return chartTooltipEl; }
-function showTooltip(e, html){
-  var t = getTooltip();
-  t.innerHTML = html;
-  t.classList.add('visible');
-  var tx = e.clientX + 14;
-  var ty = e.clientY - 10;
-  if(tx + t.offsetWidth > window.innerWidth - 10) tx = e.clientX - t.offsetWidth - 14;
-  if(ty < 10) ty = e.clientY + 20;
-  t.style.left = tx + 'px';
-  t.style.top = ty + 'px';
+// ── Charts (TanStack Charts — ver src/charts.js) ─────────────────────
+var ridesMonthChart = null;
+var topSpeedChart = null;
+
+function renderCharts(){
+  if(!rides.length || !window.BikemeCharts) return;
+  var monthEl = document.getElementById('ridesMonthChart');
+  var speedEl = document.getElementById('topSpeedChart');
+  if(!monthEl || !speedEl) return;
+  if(!ridesMonthChart) ridesMonthChart = BikemeCharts.createRidesMonthChart(monthEl, getRidesMonthlyData);
+  if(!topSpeedChart) topSpeedChart = BikemeCharts.createTopSpeedChart(speedEl, getTopSpeedRows);
+  ridesMonthChart.render();
+  topSpeedChart.render();
 }
-function hideTooltip(){ getTooltip().classList.remove('visible'); }
+
+function getTopSpeedRows(){
+  var sorted = rides.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+  return sorted.map(function(r){
+    return {
+      id: r.id,
+      date: new Date(r.date + 'T00:00:00'),
+      dateLabel: formatDate(r.date),
+      maxSpeed: r.maxSpeed,
+      avgSpeed: r.avgSpeed,
+      overallAvgSpeed: (r.overallAvgSpeed || r.avgSpeed)
+    };
+  });
+}
 
 function getRidesMonthlyData(){
   if(!rides.length) return [];
@@ -479,6 +478,7 @@ function getRidesMonthlyData(){
       km: d ? d.km : 0,
       avgSpeed: d ? d.speedSum / d.count : 0,
       label: formatMonthShort(cursor),
+      key: cursor.getFullYear() + '-' + cursor.getMonth(),
       start: new Date(cursor)
     });
     cursor.setMonth(cursor.getMonth() + 1);
@@ -488,9 +488,6 @@ function getRidesMonthlyData(){
 
 var ridesMonthMode = 0;
 var ridesMonthTitles = ['Rutas por Mes','Distancia por Mes','Vel. Media por Mes'];
-var ridesMonthKeys = ['count','km','avgSpeed'];
-var ridesMonthColors = ['#ff5839','#ff5839','#ff5839'];
-var ridesMonthUnits = ['rutas','km','km/h'];
 
 function setRidesMonthMode(mode){
   ridesMonthMode = mode;
@@ -498,7 +495,7 @@ function setRidesMonthMode(mode){
     d.classList.toggle('active', parseInt(d.dataset.mode) === mode);
   });
   document.getElementById('ridesMonthTitle').textContent = ridesMonthTitles[mode];
-  drawRidesMonthChart();
+  if(ridesMonthChart) ridesMonthChart.setMode(mode);
 }
 
 function initRidesMonthSelector(){
@@ -509,204 +506,11 @@ function initRidesMonthSelector(){
   });
 }
 
-function drawRidesMonthChart(){
-  var canvas = document.getElementById('ridesMonthChart');
-  if(!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var dpr = window.devicePixelRatio || 1;
-  var rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-  var W = rect.width, H = rect.height;
-  ctx.clearRect(0,0,W,H);
-
-  var monthly = getRidesMonthlyData();
-  if(!monthly.length) return;
-  var key = ridesMonthKeys[ridesMonthMode];
-  var color = ridesMonthColors[ridesMonthMode];
-  var unit = ridesMonthUnits[ridesMonthMode];
-  var maxVal = Math.max.apply(null, monthly.map(function(m){return m[key];})) || 1;
-  var chartH = H - 50;
-  var chartY = 20;
-  var chartW = W - 60;
-  var th = chartTheme();
-
-  ctx.strokeStyle = th.grid;
-  ctx.lineWidth = 1;
-  for(var i = 0; i <= 4; i++){
-    var y = chartY + chartH - (chartH * i / 4);
-    ctx.beginPath(); ctx.moveTo(50, y); ctx.lineTo(W - 10, y); ctx.stroke();
-    ctx.fillStyle = th.axis;
-    ctx.font = '11px Barlow, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(Math.round(maxVal * i / 4), 38, y + 3);
-  }
-
-  var stepX = monthly.length > 1 ? chartW / (monthly.length - 1) : chartW;
-  var hits = [];
-
-  ctx.beginPath();
-  monthly.forEach(function(m, idx){
-    var x = 50 + idx * stepX;
-    var val = key === 'avgSpeed' ? m[key] : m[key];
-    var y = chartY + chartH - (val / maxVal) * chartH;
-    hits.push({x:x, y:y, val:val, count:m.count, km:m.km, avgSpeed:m.avgSpeed, label:m.label, start:m.start});
-    if(idx === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
-
-  monthly.forEach(function(m, idx){
-    var x = 50 + idx * stepX;
-    var val = m[key];
-    var y = chartY + chartH - (val / maxVal) * chartH;
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill();
-  });
-
-  monthly.forEach(function(m, idx){
-    var x = 50 + idx * stepX;
-    ctx.fillStyle = th.axis;
-    ctx.font = '10px Barlow, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(m.label, x, chartY + chartH + 14);
-  });
-
-  canvas.onmousemove = function(e){
-    var r = canvas.getBoundingClientRect();
-    var mx = e.clientX - r.left, my = e.clientY - r.top;
-    var hit = null;
-    for(var i = 0; i < hits.length; i++){
-      var p = hits[i];
-      if(Math.hypot(mx - p.x, my - p.y) < 12){ hit = p; break; }
-    }
-    if(hit){
-      var endDate = new Date(hit.start.getFullYear(), hit.start.getMonth() + 1, 0);
-      var opts = {month:'long', day:'numeric', year:'numeric'};
-      var range = hit.start.toLocaleDateString('es-ES',opts) + ' – ' + endDate.toLocaleDateString('es-ES',opts);
-      var displayVal = ridesMonthMode === 0 ? Math.round(hit.val) : hit.val.toFixed(1);
-      showTooltip(e, '<strong>' + displayVal + ' ' + unit + '</strong><br>' + range);
-    } else { hideTooltip(); }
-  };
-  canvas.onmouseleave = hideTooltip;
-}
-
-var speedPointHits = [];
 var topSpeedMode = 0;
 var topSpeedLabels = ['Velocidad Máxima','Vel. Media (movimiento)','Vel. Media (con paradas)'];
-var topSpeedKeys = ['maxSpeed','avgSpeed','overallAvgSpeed'];
 
 function getTopSpeedTitle(){
   return topSpeedLabels[topSpeedMode];
-}
-
-function drawTopSpeedChart(){
-  var canvas = document.getElementById('topSpeedChart');
-  if(!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var dpr = window.devicePixelRatio || 1;
-  var rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-  var W = rect.width, H = rect.height;
-  ctx.clearRect(0,0,W,H);
-
-  var sorted = rides.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-  if(!sorted.length) return;
-  var key = topSpeedKeys[topSpeedMode];
-  var speeds = sorted.map(function(r){ return r[key]; });
-  var maxVal = 60;
-  var minVal = 0;
-  var range = 60;
-  var chartH = H - 50;
-  var chartY = 20;
-  var chartW = W - 60;
-  var color = '#ff5839';
-  var th = chartTheme();
-
-  ctx.strokeStyle = th.grid;
-  ctx.lineWidth = 1;
-  for(var i = 0; i <= 4; i++){
-    var y = chartY + chartH - (chartH * i / 4);
-    ctx.beginPath(); ctx.moveTo(50, y); ctx.lineTo(W - 10, y); ctx.stroke();
-    ctx.fillStyle = th.axis;
-    ctx.font = '11px Barlow, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText((minVal + range * i / 4).toFixed(0), 38, y + 3);
-  }
-
-  speedPointHits = [];
-
-  if(speeds.length < 2){
-    var x = 50 + chartW / 2;
-    var y = chartY + chartH / 2;
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = th.text;
-    ctx.font = '12px Barlow, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(speeds[0].toFixed(1) + ' km/h', x, y - 12);
-    speedPointHits.push({x:x, y:y, r:6, speed:speeds[0], date:sorted[0].date});
-    canvas.onmousemove = function(e){
-      var r = canvas.getBoundingClientRect();
-      var mx = e.clientX - r.left, my = e.clientY - r.top;
-      var hit = speedPointHits[0];
-      if(Math.hypot(mx - hit.x, my - hit.y) < hit.r + 4){
-        showTooltip(e, '<strong>' + hit.speed.toFixed(1) + ' km/h</strong><br>' + formatDate(hit.date));
-      } else { hideTooltip(); }
-    };
-    canvas.onmouseleave = hideTooltip;
-    return;
-  }
-
-  var stepX = chartW / (speeds.length - 1);
-
-  ctx.beginPath();
-  speeds.forEach(function(v, idx){
-    var x = 50 + idx * stepX;
-    var y = chartY + chartH - ((v - minVal) / range) * chartH;
-    if(idx === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
-
-  speeds.forEach(function(v, idx){
-    var x = 50 + idx * stepX;
-    var y = chartY + chartH - ((v - minVal) / range) * chartH;
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill();
-    speedPointHits.push({x:x, y:y, r:4, speed:v, date:sorted[idx].date});
-  });
-
-  speeds.forEach(function(v, idx){
-    if(speeds.length <= 20 || idx % Math.ceil(speeds.length / 20) === 0 || idx === speeds.length - 1){
-      var x = 50 + idx * stepX;
-      ctx.fillStyle = th.axis;
-      ctx.font = '10px Barlow, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(formatShortDate(new Date(sorted[idx].date)), x, chartY + chartH + 14);
-    }
-  });
-
-  canvas.onmousemove = function(e){
-    var r = canvas.getBoundingClientRect();
-    var mx = e.clientX - r.left, my = e.clientY - r.top;
-    var hit = null;
-    for(var i = 0; i < speedPointHits.length; i++){
-      var p = speedPointHits[i];
-      if(Math.hypot(mx - p.x, my - p.y) < p.r + 6){ hit = p; break; }
-    }
-    if(hit){
-      showTooltip(e, '<strong>' + hit.speed.toFixed(1) + ' km/h</strong><br>' + formatDate(hit.date));
-    } else { hideTooltip(); }
-  };
-  canvas.onmouseleave = hideTooltip;
 }
 
 function setTopSpeedMode(mode){
@@ -715,7 +519,7 @@ function setTopSpeedMode(mode){
     d.classList.toggle('active', parseInt(d.dataset.mode) === mode);
   });
   document.getElementById('topSpeedTitle').textContent = getTopSpeedTitle();
-  drawTopSpeedChart();
+  if(topSpeedChart) topSpeedChart.setMode(mode);
 }
 
 function initTopSpeedSelector(){
@@ -770,7 +574,7 @@ function handleFiles(files){
     var reader = new FileReader();
     reader.onload = function(e){
       try {
-        var ride = parseGPX(e.target.result, file.name);
+        var ride = parseGPX(e.target.result);
         if(ride) parsed.push(ride);
       } catch(err){
         parsed.push({error: file.name + ': ' + err.message});
@@ -783,7 +587,7 @@ function handleFiles(files){
   });
 }
 
-function parseGPX(xmlStr, filename){
+function parseGPX(xmlStr){
   var parser = new DOMParser();
   var doc = parser.parseFromString(xmlStr, 'text/xml');
   var parseError = doc.querySelector('parsererror');
@@ -804,10 +608,9 @@ function parseGPX(xmlStr, filename){
   var maxSpeed = 0;
   var speeds = [];
   var altitudes = [];
-  var prevLat = null, prevLon = null, prevAlt = null;
+  var prevLat = null, prevLon = null;
   var prevTime = null;
   var firstTime = null, lastTime = null;
-  var hasDeviceSpeed = false;
 
   trackpts.forEach(function(pt){
     var lat = parseFloat(pt.getAttribute('lat'));
@@ -832,7 +635,6 @@ function parseGPX(xmlStr, filename){
         var spdKmh = deviceSpeed * 3.6;
         speeds.push(spdKmh);
         if(spdKmh > maxSpeed) maxSpeed = spdKmh;
-        hasDeviceSpeed = true;
       } else if(prevTime !== null && time !== null){
         var dt = (time - prevTime) / 1000;
         if(dt > 0){
@@ -843,7 +645,7 @@ function parseGPX(xmlStr, filename){
       }
     }
 
-    prevLat = lat; prevLon = lon; prevAlt = ele; prevTime = time;
+    prevLat = lat; prevLon = lon; prevTime = time;
   });
 
   if(totalDist < 0.1) throw new Error('Ruta demasiado corta');
@@ -970,19 +772,6 @@ function getDayName(ds){
   return new Date(ds+'T00:00:00').toLocaleDateString('es-ES',{weekday:'long'});
 }
 function fmtNum(n){ return n.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
-function fmtInt(n){ return Math.round(n).toLocaleString('es-ES'); }
-
-// ── Resize handler for charts ────────────────────────────────────────
-var resizeTimer;
-window.addEventListener('resize', function(){
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(function(){
-    if(currentPage === 'dashboard'){
-      drawRidesMonthChart();
-      drawTopSpeedChart();
-    }
-  }, 200);
-});
 
 // Initial status
 updateDataStatus();

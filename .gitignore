@@ -12,3 +12,6 @@ __pycache__/
 *.pyc
 session
 resume.sh
+
+# Node (build de las gráficas: npm install && npm run build)
+node_modules/

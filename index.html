@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bici — Gestión de Rutas</title>
+  <title>BIKEME — Gestión de Rutas</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
@@ -90,7 +90,7 @@
                   <div class="dot" data-mode="2" title="Vel. Media" style="--dot-color:#ff5839"></div>
                 </div>
               </div>
-              <div class="chart-container"><canvas id="ridesMonthChart"></canvas></div>
+              <div class="chart-container"><div id="ridesMonthChart"></div></div>
             </div>
           </div>
           <div class="charts-row row-full">
@@ -103,7 +103,7 @@
                   <div class="dot" data-mode="2" title="Vel. Media (con paradas)" style="--dot-color:#ff5839"></div>
                 </div>
               </div>
-              <div class="chart-container"><canvas id="topSpeedChart"></canvas></div>
+              <div class="chart-container"><div id="topSpeedChart"></div></div>
             </div>
           </div>
           <div class="highlights-row">
@@ -203,7 +203,7 @@
   </div>
 
   <div class="overlay" id="overlay"></div>
-  <div class="chart-tooltip" id="chartTooltip"></div>
+  <script src="charts.bundle.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

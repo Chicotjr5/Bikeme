@@ -1,0 +1,19 @@
+{
+  "name": "bikeme",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Panel personal de rutas en bicicleta (GPX)",
+  "license": "GPL-3.0",
+  "scripts": {
+    "build": "esbuild src/charts.js --bundle --minify --format=iife --global-name=BikemeCharts --target=es2019 --outfile=charts.bundle.js",
+    "test": "node test/charts.test.mjs"
+  },
+  "dependencies": {
+    "@tanstack/charts": "^1.1.0",
+    "d3-scale": "^4.0.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
