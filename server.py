@@ -78,8 +78,9 @@ class Handler(SimpleHTTPRequestHandler):
 
 def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
-    server = ThreadingHTTPServer(('0.0.0.0', port), Handler)
-    print('Bici running at http://localhost:%d (data: %s)' % (port, DATA_FILE))
+    host = sys.argv[2] if len(sys.argv) > 2 else '0.0.0.0'
+    server = ThreadingHTTPServer((host, port), Handler)
+    print('Bici running at http://%s:%d (data: %s)' % (host, port, DATA_FILE))
     server.serve_forever()
 
 
